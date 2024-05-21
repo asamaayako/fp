@@ -5,7 +5,7 @@
  * Describe:
  */
 
-package fptoolV2
+package fp
 
 import (
 	"math/bits"
