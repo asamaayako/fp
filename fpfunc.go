@@ -1,10 +1,11 @@
+//go:build go1.23
+
 /**
  * Author: asamaayako
  * Date: 2024/4/9
  * Time: 上午9:07
  * Describe:
  */
-
 package fp
 
 import "iter"
@@ -19,7 +20,13 @@ func Fold[a, b any](f func(a, b) a, acc a) func(iter.Seq[b]) a {
 	}
 }
 
-func Take[a any](n int) func(seq iter.Seq[a]) iter.Seq[a] {
+// Head :: [a] -> [a]
+func Head[a any]() func(iter.Seq[a]) iter.Seq[a] {
+	return Take[a](1)
+}
+
+// Take :: Int -> [a] -> [a]
+func Take[a any](n int) func(iter.Seq[a]) iter.Seq[a] {
 	return func(seq iter.Seq[a]) iter.Seq[a] {
 		var count int
 		return func(yield func(a) bool) {
@@ -34,6 +41,12 @@ func Take[a any](n int) func(seq iter.Seq[a]) iter.Seq[a] {
 	}
 }
 
+// Tail :: [a] -> [a]
+func Tail[a any]() func(iter.Seq[a]) iter.Seq[a] {
+	return Drop[a](1)
+}
+
+// Drop :: Int -> [a] -> [a]
 func Drop[a any](n int) func(seq iter.Seq[a]) iter.Seq[a] {
 	return func(seq iter.Seq[a]) iter.Seq[a] {
 		return func(yield func(a) bool) {
@@ -49,11 +62,13 @@ func Drop[a any](n int) func(seq iter.Seq[a]) iter.Seq[a] {
 	}
 }
 
+// Reduce :: (a -> b -> a) -> a -> [b] -> a
 func Reduce[a, b any](f func(a, b) a) func(iter.Seq[b]) a {
 	var av a
 	return Fold(f, av)
 }
 
+// Zip :: [a] -> [b] -> [Pair<a,b>]
 func Zip[Fir, Sec any](seq2 iter.Seq2[Fir, Sec]) iter.Seq[Pair[Fir, Sec]] {
 	return func(yield func(Pair[Fir, Sec]) bool) {
 		seq2(func(fir Fir, sec Sec) bool {
