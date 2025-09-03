@@ -14,6 +14,8 @@ import (
 )
 
 // Fold:: ((a -> b -> a) -> a) -> [b] -> a
+//
+//go:inline
 func Fold[a, b any](acc a, f func(a, b) a) func(iter.Seq[b]) a {
 	return func(bs iter.Seq[b]) a {
 		for bv := range bs {
@@ -24,11 +26,15 @@ func Fold[a, b any](acc a, f func(a, b) a) func(iter.Seq[b]) a {
 }
 
 // Head :: [a] -> [a]
+//
+//go:inline
 func Head[a any]() func(iter.Seq[a]) iter.Seq[a] {
 	return Take[a](1)
 }
 
 // Take :: Int -> [a] -> [a]
+//
+//go:inline
 func Take[a any](n int) func(iter.Seq[a]) iter.Seq[a] {
 	return func(seq iter.Seq[a]) iter.Seq[a] {
 		return func(yield func(a) bool) {
@@ -43,6 +49,8 @@ func Take[a any](n int) func(iter.Seq[a]) iter.Seq[a] {
 		}
 	}
 }
+
+//go:inline
 func Len[T any](seq iter.Seq[T]) int {
 	return Fold(0, func(sum int, _ T) int {
 		return sum + 1
@@ -50,11 +58,15 @@ func Len[T any](seq iter.Seq[T]) int {
 }
 
 // Tail :: [a] -> [a]
+//
+//go:inline
 func Tail[a any]() func(iter.Seq[a]) iter.Seq[a] {
 	return Drop[a](1)
 }
 
 // Drop :: Int -> [a] -> [a]
+//
+//go:inline
 func Drop[a any](n int) func(seq iter.Seq[a]) iter.Seq[a] {
 	return func(seq iter.Seq[a]) iter.Seq[a] {
 		return func(yield func(a) bool) {
@@ -71,13 +83,24 @@ func Drop[a any](n int) func(seq iter.Seq[a]) iter.Seq[a] {
 }
 
 // Reduce :: (a -> b -> a) -> a -> [b] -> a
-func Reduce[a, b any](f func(a, b) a) func(iter.Seq[b]) a {
-	var av a
-	return Fold(av, f)
+//
+//go:inline
+func Reduce[a any](f func(a, a) a) func(iter.Seq[a]) a {
+	var result a
+	var initialized bool
+	return Fold(result, func(acc a, bv a) a {
+		if !initialized {
+			initialized = true
+			return bv
+		}
+		return f(acc, bv)
+	})
 }
 
 // 需要同时从两个序列中获取元素
 // Zip :: [a] -> [b] -> [Pair<a,b>]
+//
+//go:inline
 func Zip[T, U any](seq1 iter.Seq[T], seq2 iter.Seq[U]) iter.Seq[Pair[T, U]] {
 	return func(yield func(Pair[T, U]) bool) {
 		next1, stop1 := iter.Pull(seq1)
@@ -99,6 +122,8 @@ func Zip[T, U any](seq1 iter.Seq[T], seq2 iter.Seq[U]) iter.Seq[Pair[T, U]] {
 }
 
 // UnZip :: [Pair<a,b>] -> [a] -> [b]
+//
+//go:inline
 func UnZip[Fir, Sec any](seq iter.Seq[Pair[Fir, Sec]]) iter.Seq2[Fir, Sec] {
 	return func(yield func(Fir, Sec) bool) {
 		seq(func(p Pair[Fir, Sec]) bool {
@@ -107,6 +132,7 @@ func UnZip[Fir, Sec any](seq iter.Seq[Pair[Fir, Sec]]) iter.Seq2[Fir, Sec] {
 	}
 }
 
+//go:inline
 func UnZipSeq2[Fir, Sec any](seq2 iter.Seq2[Fir, Sec]) (iter.Seq[Fir], iter.Seq[Sec]) {
 	var firsts []Fir
 	var seconds []Sec
@@ -122,6 +148,8 @@ func UnZipSeq2[Fir, Sec any](seq2 iter.Seq2[Fir, Sec]) (iter.Seq[Fir], iter.Seq[
 }
 
 // Split :: [a] -> ([a],[a])
+//
+//go:inline
 func Split[a any](seq iter.Seq[a]) (iter.Seq[a], iter.Seq[a]) {
 	seq1 := seq //流可以重复使用 注意作用域即可
 	return seq1, seq
@@ -129,6 +157,8 @@ func Split[a any](seq iter.Seq[a]) (iter.Seq[a], iter.Seq[a]) {
 
 // 将序列分块处理
 // Chunk:: int->[a]->[[a]]
+//
+//go:inline
 func Chunk[T any](size int) func(seq iter.Seq[T]) iter.Seq[[]T] {
 	return func(seq iter.Seq[T]) iter.Seq[[]T] {
 		return func(yield func([]T) bool) {
@@ -153,6 +183,8 @@ func Chunk[T any](size int) func(seq iter.Seq[T]) iter.Seq[[]T] {
 // 创建滑动窗口
 // SlidingWindow:: int -> [T]->[[T]]
 // used read only
+//
+//go:inline
 func SlidingWindow[T any](n int) func(iter.Seq[T]) iter.Seq[[]T] {
 	return func(seq iter.Seq[T]) iter.Seq[[]T] {
 		return func(yield func([]T) bool) {
@@ -179,6 +211,8 @@ func SlidingWindow[T any](n int) func(iter.Seq[T]) iter.Seq[[]T] {
 
 // 当满足某个条件时才继续迭代
 // TakeWhile:: (T->bool)->[T]->[T]
+//
+//go:inline
 func TakeWhile[T any](predicate func(T) bool) func(iter.Seq[T]) iter.Seq[T] {
 	return func(seq iter.Seq[T]) iter.Seq[T] {
 		return func(yield func(T) bool) {
@@ -194,6 +228,8 @@ func TakeWhile[T any](predicate func(T) bool) func(iter.Seq[T]) iter.Seq[T] {
 
 // 处理相邻元素对
 // AdjacentPairs:: [T]->[Pair(T,T)]
+//
+//go:inline
 func AdjacentPairs[T any](seq iter.Seq[T]) iter.Seq[[2]T] {
 	return func(yield func([2]T) bool) {
 		var prev T
@@ -213,6 +249,7 @@ func AdjacentPairs[T any](seq iter.Seq[T]) iter.Seq[[2]T] {
 	}
 }
 
+//go:inline
 func Pairs[T any](seq iter.Seq[T]) iter.Seq[[2]T] {
 	return func(yield func([2]T) bool) {
 		chunks := Chunk[T](2)(seq)
@@ -223,6 +260,8 @@ func Pairs[T any](seq iter.Seq[T]) iter.Seq[[2]T] {
 }
 
 // Map :: (a -> b) -> [a] -> [b]
+//
+//go:inline
 func Map[a, b any](f func(a) b) func(iter.Seq[a]) iter.Seq[b] {
 	return func(as iter.Seq[a]) iter.Seq[b] {
 		return func(yield func(b) bool) {
@@ -234,6 +273,8 @@ func Map[a, b any](f func(a) b) func(iter.Seq[a]) iter.Seq[b] {
 }
 
 // Filter :: (a -> Bool) -> [a] -> [a]
+//
+//go:inline
 func Filter[a any](p func(a) bool) func(iter.Seq[a]) iter.Seq[a] {
 	return func(as iter.Seq[a]) iter.Seq[a] {
 		return func(yield func(a) bool) {
@@ -243,12 +284,13 @@ func Filter[a any](p func(a) bool) func(iter.Seq[a]) iter.Seq[a] {
 				}
 				return true
 			})
-			return
 		}
 	}
 }
 
 // Compose :: ([b]->[c])->([a]->[b])->[t]->[t]
+//
+//go:inline
 func Compose[a, b, c any](f func(iter.Seq[b]) iter.Seq[c], g func(iter.Seq[a]) iter.Seq[b]) func(iter.Seq[a]) iter.Seq[c] {
 	return func(as iter.Seq[a]) iter.Seq[c] {
 		return f(g(as))
@@ -256,6 +298,8 @@ func Compose[a, b, c any](f func(iter.Seq[b]) iter.Seq[c], g func(iter.Seq[a]) i
 }
 
 // Pipe Pipe the functions from left to right
+//
+//go:inline
 func Pipe[a, b, c any](f func(iter.Seq[a]) iter.Seq[b], g func(iter.Seq[b]) iter.Seq[c]) func(iter.Seq[a]) iter.Seq[c] {
 	return func(as iter.Seq[a]) iter.Seq[c] {
 		return g(f(as))
