@@ -6,8 +6,6 @@
  */
 package fp
 
-type Seq[T any] = seq[T]
-type Seq2[K, V any] = seq2[K, V]
 type Pair[T any, U any] struct {
 	First  T
 	Second U

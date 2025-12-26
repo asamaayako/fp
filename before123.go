@@ -2,8 +2,8 @@
 
 package fp
 
-type seq[V any] func(yield func(V) bool)
-type seq2[K, V any] func(yield func(K, V) bool)
+type Seq[V any] func(yield func(V) bool)
+type Seq2[K, V any] func(yield func(K, V) bool)
 
 // ==================== 核心函数（兼容实现）====================
 

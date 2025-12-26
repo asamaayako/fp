@@ -11,7 +11,11 @@
  */
 package fp
 
-import "fmt"
+import (
+	"fmt"
+	"runtime"
+	"strings"
+)
 
 // ==================== Maybe Monad ====================
 // Maybe 用于处理可能不存在的值，避免 nil 指针问题
@@ -100,10 +104,36 @@ func (r Result[T]) IsErr() bool {
 }
 
 // Unwrap 获取 Result 中的值和错误
-func (r Result[T]) Unwrap() (T, error) {
+func (r Result[T]) Unwrap() T {
 	if r.isOk {
-		return r.value, nil
+		return r.value
 	}
+	panic(r.panicWithStackTrace())
+}
+
+// panicWithStackTrace 获取调用堆栈信息并构造错误消息
+func (r Result[T]) panicWithStackTrace() string {
+	var buf strings.Builder
+	buf.WriteString("called Result.Unwrap() on an error result\n")
+	buf.WriteString("error: " + r.err.Error() + "\n")
+	buf.WriteString("stack trace:\n")
+
+	pcs := make([]uintptr, 32)
+	n := runtime.Callers(2, pcs)
+	frames := runtime.CallersFrames(pcs[:n])
+
+	for {
+		frame, more := frames.Next()
+		buf.WriteString(fmt.Sprintf("  %s\n", frame.Function))
+		buf.WriteString(fmt.Sprintf("    %s:%d\n", frame.File, frame.Line))
+		if !more {
+			break
+		}
+	}
+
+	return buf.String()
+}
+func (r Result[T]) SafeUnwarp() (T, error) {
 	return r.value, r.err
 }
 

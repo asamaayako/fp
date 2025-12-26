@@ -8,8 +8,8 @@ import (
 	"slices"
 )
 
-type seq[V any] = iter.Seq[V]
-type seq2[K, V any] = iter.Seq2[K, V]
+type Seq[V any] = iter.Seq[V]
+type Seq2[K, V any] = iter.Seq2[K, V]
 
 // ==================== 核心函数（有性能或API差异）====================
 

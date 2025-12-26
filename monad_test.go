@@ -150,9 +150,9 @@ func TestResultOk(t *testing.T) {
 		t.Error("Expected IsErr to be false")
 	}
 
-	v, err := r.Unwrap()
-	if err != nil || v != 42 {
-		t.Errorf("Expected 42 and nil error, got %d and %v", v, err)
+	v := r.Unwrap()
+	if v != 42 {
+		t.Errorf("Expected 42, got %d", v)
 	}
 }
 
@@ -169,10 +169,27 @@ func TestResultErr(t *testing.T) {
 		t.Error("Expected IsErr to be true")
 	}
 
-	_, err := r.Unwrap()
-	if err != expectedErr {
-		t.Errorf("Expected error %v, got %v", expectedErr, err)
-	}
+	// Unwrap 应该 panic 当 Result 包含错误时，且 panic 消息应包含堆栈信息
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Error("Expected Unwrap to panic on error")
+			return
+		}
+
+		panicMsg := recovered.(string)
+		// 验证 panic 消息包含必要的信息
+		if !strings.Contains(panicMsg, "called Result.Unwrap() on an error result") {
+			t.Errorf("Expected panic message to contain 'called Result.Unwrap() on an error result', got: %s", panicMsg)
+		}
+		if !strings.Contains(panicMsg, "something went wrong") {
+			t.Errorf("Expected panic message to contain original error, got: %s", panicMsg)
+		}
+		if !strings.Contains(panicMsg, "stack trace") {
+			t.Errorf("Expected panic message to contain 'stack trace', got: %s", panicMsg)
+		}
+	}()
+	r.Unwrap()
 }
 
 func TestResultMap(t *testing.T) {
@@ -181,7 +198,7 @@ func TestResultMap(t *testing.T) {
 	err := Err[int](errors.New("error"))
 
 	doubled := ResultMap(ok, func(x int) int { return x * 2 })
-	if v, _ := doubled.Unwrap(); v != 42 {
+	if v := doubled.Unwrap(); v != 42 {
 		t.Errorf("Expected 42, got %d", v)
 	}
 
@@ -199,8 +216,8 @@ func TestResultFlatMap(t *testing.T) {
 		})
 	})
 
-	if v, err := result.Unwrap(); err != nil || v != 10 {
-		t.Errorf("Expected 10, got %d with error %v", v, err)
+	if v := result.Unwrap(); v != 10 {
+		t.Errorf("Expected 10, got %d", v)
 	}
 
 	// 测试除零失败
@@ -598,7 +615,7 @@ func TestResultFromFunc(t *testing.T) {
 	okResult := ResultFromFunc(func() (int, error) {
 		return 42, nil
 	})
-	if v, err := okResult.Unwrap(); err != nil || v != 42 {
+	if v := okResult.Unwrap(); v != 42 {
 		t.Error("Expected Ok(42)")
 	}
 
@@ -629,7 +646,7 @@ func TestResultSequence(t *testing.T) {
 	// 测试 ResultSequence
 	allOk := []Result[int]{Ok(1), Ok(2), Ok(3)}
 	result := ResultSequence(allOk)
-	if values, err := result.Unwrap(); err != nil || !slices.Equal(values, []int{1, 2, 3}) {
+	if values := result.Unwrap(); !slices.Equal(values, []int{1, 2, 3}) {
 		t.Error("Expected Ok([1,2,3])")
 	}
 
@@ -706,8 +723,8 @@ func ExampleResult_errorHandling() {
 		return divide(a, 2)
 	})
 
-	if v, err := result.Unwrap(); err == nil {
-		fmt.Printf("Result: %d\n", v)
+	if result.IsOk() {
+		fmt.Printf("Result: %d\n", result.Unwrap())
 	}
 
 	// Output:
